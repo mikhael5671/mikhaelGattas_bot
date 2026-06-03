@@ -21,4 +21,8 @@ def what(text):
       if n and any(c.isdigit() for c in ph):return"reg",{"name":n,"phone":ph}
   if any(w in text for w in ["ضبط","خلي الاشعار","ظبط","غير المعاد","المعاد"]):return "time",text
   if any(w in text for w in ["ميعادي","الميعاد"]): return "mytime",None
-  
+  if any(w in text for w in ["جديد","اضيف","مخدوم","تسجيل","اسجل"]):return "want",None
+  if any(w in text for w in ["مين انت","وظيفتك","انت بتعمل ايه"]):return "desc",None
+  if any(w in text for w in ["حضر","غاب","نسبة","تقرير","احصائيات"]):return "ask",text
+  if text in ["/start","سلام","اهلا","هالو","هاي"]):return "hi",None
+  return"?",None
