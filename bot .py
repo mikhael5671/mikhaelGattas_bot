@@ -36,4 +36,13 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
     text=update.message.text
     cid=str(update.effective_chat.id)
     act,val=what(text)
-
+    if act=="time":
+      day,hour=None,None
+      for a,e in DAYS.items():
+        if a in text: day=e
+      nums=re.findall(r'\d+',text)
+      if nums:
+        h=int(nums[0])
+        if 0<=h<=23: hour=h
+      d=load()
+      if 
