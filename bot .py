@@ -26,3 +26,14 @@ def what(text):
   if any(w in text for w in ["حضر","غاب","نسبة","تقرير","احصائيات"]):return "ask",text
   if text in ["/start","سلام","اهلا","هالو","هاي"]):return "hi",None
   return"?",None
+async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
+  cid=str(update.effective_chat.id)
+  d=load()
+  if "admins" not in d: d["admins"]={}
+  if cid not in d["admins"]: d["admins"][cid]={"day":"fri","hour":14};save(d)
+  await update.message.reply_text("اهلا\n\nالرقم-الاسم:تسجيل\nاحصائيات:تقرير\nخلي الاشعار يوم الجمعة:ضبط4\nميعادي:معرفة الميعاد")
+  async def msg(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    text=update.message.text
+    cid=str(update.effective_chat.id)
+    act,val=what(text)
+
