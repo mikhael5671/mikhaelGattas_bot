@@ -45,4 +45,21 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
         h=int(nums[0])
         if 0<=h<=23: hour=h
       d=load()
-      if 
+      if "admins" not in d: d["admins"]={}
+      if cid not in d["admins"]:d["admins"][cid]={"day":"fri","hour":14}
+      if day:d["admins"][cid]["day"]=day
+      if hour is not None:d["admins"][cid]["hour"]=hour
+      save(d)
+      rev={v:k for k,v in DAYS.items()}
+      cd=rev.get(d["admins"][cid]["day"],"الجمعة")
+      ch=d["admins"][cid]["hour"]
+      await update.message.reply_text(f"تم!\n{cd}\n{ch}:00")
+      return
+    if act=="mytime":
+      d=load()
+      a=d.get("admins",{}).get(cid,{"day":"fri","hour":!4})
+      rev={v:k for k,v in DAYS.items()}
+      cd=rev.get(a["day"],"الجمعة")
+      await update.message.reply_text(f"الميعاد:\n{cd}\n{a['hour']}:00")
+      return
+      
