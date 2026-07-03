@@ -62,7 +62,7 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
       return
     if act=="mytime":
       d=load()
-      a=d.get("admins",{}).get(cid,{"day":"fri","hour":!4})
+      a = d.get("admins",{}).get(cid,{"day":"fri","hour":14})
       rev={v:k for k,v in DAYS.items()}
       cd=rev.get(a["day"],"الجمعة")
       await update.message.reply_text(f"الميعاد:\n{cd}\n{a['hour']}:00")
