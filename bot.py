@@ -3,7 +3,7 @@ from datetime import datetime
 from telegram import Update,InlineKeyboardButton,InlineKeyboardMarkup
 from telegram.ext import Application,CommandHandler,MessageHandler,CallbackQueryHandler,filters,ContextTypes
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-TELEGRAM_TOKEN = "8736687534:AAEeV3-HTFweul4-mFboAvl157YRlqjm4kA"
+TOKEN = "8736687534:AAEeV3-HTFweul4-mFboAvl157YRlqjm4kA"
 DATA_FILE = "data.json"
 DAYS ={"السبت":"sat","الاحد":"sun","الاثنين":"mon","الثلاثاء":"tue","الاربعاء":"wed","الخميس":"thu","الجمعة":"fri"}
 def load():
@@ -133,7 +133,7 @@ async def msg(update:Update,context:ContextTypes.DEFAULT_TYPE):
                         pass
     def main():
         print(" تشغيل...")
-        app=Application.builder().token(TELEGRAM_TOKEN).build()
+        app=Application.builder().token(TOKEN).build()
         app.add_handler(CommandHandler("start",hi))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,msg))  
         app.add_handler(CallbackQueryHandler(btn))
