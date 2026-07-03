@@ -24,7 +24,7 @@ def what(text):
   if any(w in text for w in ["جديد","اضيف","مخدوم","تسجيل","اسجل"]):return "want",None
   if any(w in text for w in ["مين انت","وظيفتك","انت بتعمل ايه"]):return "desc",None
   if any(w in text for w in ["حضر","غاب","نسبة","تقرير","احصائيات"]):return "ask",text
-  if text in ["/start","سلام","اهلا","هالو","هاي"]):return "hi",None
+  if text in ["/start","سلام","اهلا","هالو","هاي"]):return "hi", None
   return"?",None
 async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
   cid=str(update.effective_chat.id)
