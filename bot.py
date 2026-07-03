@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# تم وضع التوكن الخاص بك هنا
+# التوكن الخاص بك مدمج وجاهز
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
 DATA_FILE = "data.json"
 
@@ -153,7 +153,6 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.edit_message_text(f"{n}: {s}")
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """إرسال أزرار الحضور يدوياً عند طلب /check"""
     d = load()
     students = [s for s in d.get("students",[]) if s.get("active",True)]
     if not students:
@@ -169,15 +168,33 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     print("جاري تشغيل البوت...")
     app = Application.builder().token(TOKEN).build()
+    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("check", check))
-    
-    # تم تعديل الفلتر هنا لمنع تداخل الرسائل النصية المكتوبة مع الأوامر المباشرة
+    # تعديل الفلتر لمنع تداخل الرسائل النصية المكتوبة مع الأوامر المباشرة
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
-    
-    print("البوت شغال!")
-    app.run_polling(drop_pending_updates=True)
+
+    # --- إعداد Webhook لمنصة Railway ---
+    RAILWAY_URL = os.environ.get("RAILWAY_URL", "")
+    PORT = int(os.environ.get("PORT", 8443))  # Railway يمرر منفذ ديناميكي عبر الـ Environment Variables
+
+    if RAILWAY_URL:
+        # إزالة أي / في نهاية الرابط تلقائياً وتجهيز مسار الـ Webhook
+        base_url = RAILWAY_URL.strip("/")
+        webhook_url = f"{base_url}/webhook"
+        
+        print(f"استخدام نظام الـ Webhook على الرابط: {webhook_url}")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path="webhook",
+            webhook_url=webhook_url
+        )
+    else:
+        # تشغيل محلي للتجربة بالـ Polling
+        print("لم يتم العثور على RAILWAY_URL، يتم التشغيل بنظام polling محلياً...")
+        app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
