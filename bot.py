@@ -39,6 +39,7 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
   await update.message.reply_text("اهلا\n\nالرقم-الاسم:تسجيل\nاحصائيات:تقرير\nخلي الاشعار يوم الجمعة:ضبط4\nميعادي:معرفة الميعاد")
 async def msg(update:Update,context:ContextTypes.DEFAULT_TYPE):
     text=update.message.text
+    await update.message.reply_text(f"انت قلت:{text}")
     cid=str(update.effective_chat.id)
     act,val=what(text)
     if act=="time":
