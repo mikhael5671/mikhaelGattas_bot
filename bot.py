@@ -179,13 +179,13 @@ async def check_and_send_messages(app):
                             except Exception as e:
                                 print(f"خطأ أثناء إرسال الإشعار: {e}")
         
-        await asyncio.sleep(30)  
+        await asyncio.sleep(30)  # التحقق كل 30 ثانية
 
 def main():
     print("جاري تشغيل البوت...")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg)) # تم تصحيح الفلتر لمنع التداخل
     app.add_handler(CallbackQueryHandler(btn))
     
     # تشغيل حلقة الإشعارات بجانب البوت
