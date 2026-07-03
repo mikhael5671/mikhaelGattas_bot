@@ -1,10 +1,10 @@
 import json
 import os
 import re
+import asyncio
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # تم وضع التوكن الخاص بك هنا
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
@@ -152,37 +152,47 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     e = "حضر" if a == "present" else "غاب"
     await q.edit_message_text(f"{n}: {e}")
 
-async def weekly(context: ContextTypes.DEFAULT_TYPE):
-    d = load()
-    students = [s for s in d.get("students",[]) if s.get("active",True)]
-    if not students: return
-    now = datetime.now()
-    today_eng = now.strftime("%a").lower()[:3]
-    hour_now = now.hour
-    for cid, admin_data in d.get("admins",{}).items():
-        if admin_data.get("day","fri") == today_eng and admin_data.get("hour",14) == hour_now:
-            for s in students:
-                kb = [[InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
-                       InlineKeyboardButton("غاب", callback_data=f"absent_{s['name']}")]]
-                try:
-                    await context.bot.send_message(chat_id=int(cid), text=f"حضور: {s['name']}", reply_markup=InlineKeyboardMarkup(kb))
-                except: pass
+async def check_and_send_messages(app):
+    """التحقق من الوقت وإرسال الإشعارات بدون apscheduler."""
+    print("تم تشغيل نظام الإشعارات الداخلي.")
+    while True:
+        now = datetime.now()
+        today_eng = now.strftime("%a").lower()[:3]
+        hour_now = now.hour
+        minute_now = now.minute
+        
+        # فقط في الدقيقة 0 من كل ساعة
+        if minute_now == 0:
+            d = load()
+            students = [s for s in d.get("students",[]) if s.get("active",True)]
+            if students:
+                for cid, admin_data in d.get("admins",{}).items():
+                    admin_day = admin_data.get("day","fri")
+                    admin_hour = admin_data.get("hour",14)
+                    
+                    if admin_day == today_eng and admin_hour == hour_now:
+                        for s in students:
+                            kb = [[InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
+                                   InlineKeyboardButton("غاب", callback_data=f"absent_{s['name']}")]]
+                            try:
+                                await app.bot.send_message(chat_id=int(cid), text=f"حضور: {s['name']}", reply_markup=InlineKeyboardMarkup(kb))
+                            except Exception as e:
+                                print(f"خطأ أثناء إرسال الإشعار: {e}")
+        
+        await asyncio.sleep(30)  
 
 def main():
-    print("تشغيل...")
+    print("جاري تشغيل البوت...")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
     
-    from datetime import timezone
-    sch = AsyncIOScheduler(timezone=timezone.utc)
+    # تشغيل حلقة الإشعارات بجانب البوت
+    loop = asyncio.get_event_loop()
+    loop.create_task(check_and_send_messages(app))
     
-    # تم تعديل هذا السطر لتمرير الـ context المناسب للوظيفة تلقائياً
-    sch.add_job(weekly, 'cron', minute=0, kwargs={'context': ContextTypes.DEFAULT_TYPE(app)})
-    sch.start()
-    
-    print("شغال!")
+    print("البوت شغال!")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
