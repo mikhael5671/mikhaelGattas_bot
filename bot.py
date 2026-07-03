@@ -1,7 +1,7 @@
 import json,os,re
 from datetime import datetime
 from telegram import Update,InlineKeyboardButton,InlineKeyboardMarkup
-from telegram.ext import Application,CommandHandler,MessageHandler,CallbackQueryHandeler,filters,ContextTypes
+from telegram.ext import Application,CommandHandler,MessageHandler,CallbackQueryHandler,filters,ContextTypes
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 TELEGRAM_TOKEN = "8736687534:AAEeV3-HTFweul4-mFboAvl157YRlqjm4KA"
 DATA_FILE = "data.json"
