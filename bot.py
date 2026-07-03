@@ -1,32 +1,44 @@
 import json
 import os
 import re
+import time
+import logging
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.error import Conflict
 
-# التوكن الخاص بك مدمج وجاهز
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("telegram").setLevel(logging.WARNING)
+
+# ضع التوكن الخاص بك هنا
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
 DATA_FILE = "data.json"
 
-DAYS = {
-    "السبت":"sat","الاحد":"sun","الأحد":"sun","الاثنين":"mon","الإثنين":"mon",
-    "الثلاثاء":"tue","التلات":"tue","الاربعاء":"wed","الأربعاء":"wed",
-    "الخميس":"thu","الجمعة":"fri","الجمعه":"fri"
-}
-
-def load():
+def load_all():
     if os.path.exists(DATA_FILE):
         f = open(DATA_FILE, 'r', encoding='utf-8')
         data = json.load(f)
         f.close()
         return data
-    return {"students":[],"attendance":[],"admins":{}}
+    return {}
 
-def save(d):
+def save_all(data):
     f = open(DATA_FILE, 'w', encoding='utf-8')
-    json.dump(d, f, ensure_ascii=False, indent=2)
+    json.dump(data, f, ensure_ascii=False, indent=2)
     f.close()
+
+def get_admin_data(cid):
+    all_data = load_all()
+    if cid not in all_data:
+        all_data[cid] = {"students": [], "attendance": []}
+        save_all(all_data)
+    return all_data[cid]
+
+def save_admin_data(cid, admin_data):
+    all_data = load_all()
+    all_data[cid] = admin_data
+    save_all(all_data)
 
 def what(text):
     text = text.strip()
@@ -37,10 +49,6 @@ def what(text):
             ph = p[1].strip()
             if n and any(c.isdigit() for c in ph):
                 return "reg", {"name":n,"phone":ph}
-    if "خلي الاشعار" in text or "ضبط الميعاد" in text or "غير الميعاد" in text:
-        return "time", text
-    if "ميعادي" in text or "الميعاد" in text:
-        return "mytime", None
     if "اسجل" in text or "تسجيل" in text or "مخدوم" in text or "اضيف" in text or "جديد" in text:
         return "want", None
     if "بتعمل ايه" in text or "وظيفتك" in text or "مين انت" in text:
@@ -52,10 +60,7 @@ def what(text):
     return "?", None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    cid = str(update.effective_chat.id)
-    d = load()
-    if "admins" not in d: d["admins"] = {}
-    if cid not in d["admins"]: d["admins"][cid] = {"day":"fri","hour":14}; save(d)
+    get_admin_data(str(update.effective_chat.id))
     await update.message.reply_text(
         "اهلا بك في بوت مدارس الاحد!\n\n"
         "تسجيل مخدوم جديد:\n"
@@ -63,65 +68,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "مثال: ماركو - 01234567890\n\n"
         "تقرير الحضور:\n"
         "اكتب: تقرير\n\n"
-        "طلب إشعار الحضور اليدوي:\n"
+        "طلب إشعار الحضور:\n"
         "اكتب: /check\n\n"
-        "ضبط ميعاد الإشعار التلقائي:\n"
-        "اكتب: خلي الاشعار يوم الجمعة 4\n\n"
-        "معرفة الميعاد:\n"
-        "اكتب: ميعادي"
+        "لمسح كل بياناتك:\n"
+        "اكتب: /reset"
     )
 
 async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     cid = str(update.effective_chat.id)
     act, val = what(text)
-    
-    if act == "time":
-        day = None; hour = None
-        for a, e in DAYS.items():
-            if a in text: day = e
-        nums = re.findall(r'\d+', text)
-        if nums:
-            h = int(nums[0])
-            if 0 <= h <= 23: hour = h
-        d = load()
-        if "admins" not in d: d["admins"] = {}
-        if cid not in d["admins"]: d["admins"][cid] = {"day":"fri","hour":14}
-        if day: d["admins"][cid]["day"] = day
-        if hour is not None: d["admins"][cid]["hour"] = hour
-        save(d)
-        rev = {v:k for k,v in DAYS.items()}
-        cd = rev.get(d["admins"][cid]["day"], "الجمعة")
-        ch = d["admins"][cid]["hour"]
-        await update.message.reply_text(f"تم ضبط الاشعار!\nاليوم: {cd}\nالساعة: {ch}:00")
-        return
-    
-    if act == "mytime":
-        d = load()
-        a = d.get("admins",{}).get(cid, {"day":"fri","hour":14})
-        rev = {v:k for k,v in DAYS.items()}
-        cd = rev.get(a["day"], "الجمعة")
-        await update.message.reply_text(f"الميعاد الحالي:\nاليوم: {cd}\nالساعة: {a['hour']}:00")
-        return
-    
+    admin_data = get_admin_data(cid)
+
     if act == "desc":
-        await update.message.reply_text("بوت مدارس الاحد الذكي.\n\nالتسجيل: الاسم - الرقم\nالتقارير: تقرير\nضبط الاشعار: خلي الاشعار يوم الجمعة 4")
+        await update.message.reply_text("بوت مدارس الاحد الذكي.\n\nالتسجيل: الاسم - الرقم\nالتقارير: تقرير")
         return
-    
+
     if act == "reg":
-        d = load()
-        d["students"].append({"name":val["name"],"phone":val["phone"],"active":True})
-        save(d)
+        admin_data["students"].append({"name":val["name"],"phone":val["phone"],"active":True})
+        save_admin_data(cid, admin_data)
         await update.message.reply_text(f"تم تسجيل المخدوم بنجاح!\nالاسم: {val['name']}\nالرقم: {val['phone']}")
         return
-    
+
     if act == "want":
         await update.message.reply_text("اكتب: الاسم - الرقم\nمثال: ماركو - 01234567890")
         return
-    
+
     if act == "ask":
-        d = load()
-        att = d.get("attendance", [])
+        att = admin_data.get("attendance", [])
         if not att: await update.message.reply_text("لا يوجد بيانات حضور."); return
         stats = {}
         for r in att:
@@ -135,11 +109,11 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rep += f"{n}: حضر {s['حضر']} | غاب {s['غاب']} | {p}%\n"
         await update.message.reply_text(rep)
         return
-    
+
     if act == "hi":
         await update.message.reply_text("اهلا بك!")
         return
-    
+
     await update.message.reply_text("لم افهم. جرب:\n- الاسم - الرقم\n- تقرير\n- /check")
 
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -147,14 +121,16 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     a, n = q.data.split("_", 1)
     s = "حضر" if a == "present" else "غاب"
-    d = load()
-    d["attendance"].append({"student_name":n,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
-    save(d)
+    cid = str(update.effective_chat.id)
+    admin_data = get_admin_data(cid)
+    admin_data["attendance"].append({"student_name":n,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
+    save_admin_data(cid, admin_data)
     await q.edit_message_text(f"{n}: {s}")
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    d = load()
-    students = [s for s in d.get("students",[]) if s.get("active",True)]
+    cid = str(update.effective_chat.id)
+    admin_data = get_admin_data(cid)
+    students = [s for s in admin_data.get("students",[]) if s.get("active",True)]
     if not students:
         await update.message.reply_text("لا يوجد مخدومين مسجلين.")
         return
@@ -165,36 +141,33 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]]
         await update.message.reply_text(text=f"حضور: {s['name']}", reply_markup=InlineKeyboardMarkup(kb))
 
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    cid = str(update.effective_chat.id)
+    all_data = load_all()
+    if cid in all_data:
+        del all_data[cid]
+        save_all(all_data)
+    await update.message.reply_text("تم مسح جميع بياناتك وبدأ التشغيل من جديد.")
+
 def main():
-    print("جاري تشغيل البوت...")
+    print("البوت يعمل...")
     app = Application.builder().token(TOKEN).build()
-    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("check", check))
-    # تعديل الفلتر لمنع تداخل الرسائل النصية المكتوبة مع الأوامر المباشرة
+    app.add_handler(CommandHandler("reset", reset))
+    
+    # تم تعديل الفلتر هنا لمنع التداخل مع الأوامر المباشرة
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
-
-    # --- إعداد Webhook لمنصة Railway ---
-    RAILWAY_URL = os.environ.get("RAILWAY_URL", "")
-    PORT = int(os.environ.get("PORT", 8443))  # Railway يمرر منفذ ديناميكي عبر الـ Environment Variables
-
-    if RAILWAY_URL:
-        # إزالة أي / في نهاية الرابط تلقائياً وتجهيز مسار الـ Webhook
-        base_url = RAILWAY_URL.strip("/")
-        webhook_url = f"{base_url}/webhook"
-        
-        print(f"استخدام نظام الـ Webhook على الرابط: {webhook_url}")
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path="webhook",
-            webhook_url=webhook_url
-        )
-    else:
-        # تشغيل محلي للتجربة بالـ Polling
-        print("لم يتم العثور على RAILWAY_URL، يتم التشغيل بنظام polling محلياً...")
-        app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+        except Conflict:
+            print("هناك نسخة أخرى تعمل، جاري المحاولة بعد ثانيتين...")
+            time.sleep(2)
+        except Exception as e:
+            print(f"خطأ غير متوقع: {e}")
+            time.sleep(5)
