@@ -63,37 +63,37 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
       await update.message.reply_text(f"الميعاد:\n{cd}\n{a['hour']}:00")
       return
       if act=="desc":  
-          await update.message.reply_text("🤖 بوت مدارس الأحد الذكي.\n\n📝 تسجيل: الاسم - الرقم\n📊 تقرير: إحصائيات\n⏰ ضبط: خلي الإشعار يوم الأحد 4\n📲 واتساب للغايبين") 
+          await update.message.reply_text(" بوت مدارس الأحد الذكي.\n\n تسجيل: الاسم - الرقم\n تقرير: إحصائيات\n ضبط: خلي الإشعار يوم الأحد 4\n واتساب للغايبين") 
           return    
       if act=="reg":
           d=load()
           d["students"].append({"name":val["name"],"phone":val["phone"],"active":True})
           save(d) 
-          await update.message.reply_text(f"✅ تم!\n👤 {val['name']}\n📱 {val['phone']}") 
+          await update.message.reply_text(f" تم!\n {val['name']}\n📱 {val['phone']}") 
           return
       if act=="want":
-          await update.message.reply_text("📝 اكتب: الاسم - الرقم\nمثال: ماركو - 01234567890") 
+          await update.message.reply_text(" اكتب: الاسم - الرقم\nمثال: ماركو - 01234567890") 
           return
       if act=="ask":
           d=load()
           att=d.get("attendance",[]) 
-          if not att: await update.message.reply_text("📊 مفيش بيانات."); return
+          if not att: await update.message.reply_text(" مفيش بيانات."); return
           stats={}
           for r in att:
               n,s=r.get("student_name","?"),r.get("status","") 
               if n not in stats: stats[n]={"حضر":0,"غاب":0}
               if s in stats[n]: stats[n][s]+=1 
-          rep="📊 تقرير:\n\n" 
+          rep=" تقرير:\n\n" 
           for n,s in stats.items():
               t=s["حضر"]+s["غاب"]
               p=round(s["حضر"]/t*100) if t>0 else 0   
-              rep+=f"👤 {n}: حضر {s['حضر']} | غاب {s['غاب']} | {p}%\n"
+              rep+=f" {n}: حضر {s['حضر']} | غاب {s['غاب']} | {p}%\n"
           await update.message.reply_text(rep)
           return
       if act=="hi":  
-          await update.message.reply_text("👋 أهلاً!\n📝 تسجيل: الاسم - الرقم\n📊 تقرير: إحصائيات") 
+          await update.message.reply_text(" أهلاً!\n تسجيل: الاسم - الرقم\n تقرير: إحصائيات") 
           return
-      await update.message.reply_text("🤔 مش فاهم.\n• الاسم - الرقم\n• تقرير\n• خلي الإشعار يوم الجمعة 4")
+      await update.message.reply_text(" مش فاهم.\n• الاسم - الرقم\n• تقرير\n• خلي الإشعار يوم الجمعة 4")
     async def btn(update:Update,context:ContextTypes.DEFAULT_TYPE):
         q=update.callback_query
         await q.answer()
@@ -102,7 +102,7 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
         d=load()
         d["attendance"].append({"student_name":n,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
         save(d)
-        e="✅" if a=="present" else "⚠️" 
+        e="" if a=="present" else "" 
         await q.edit_message_text(f"{e} {n}: {s}")
     async def weekly(context:ContextTypes.DEFAULT_TYPE): 
         d=load()
@@ -118,15 +118,15 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
             if today_eng==admin_day and hour_now==admin_hour:
                 for s in students:
                     kb=[[
-                      InlineKeyboardButton("✅ حضر",callback_data=f"present_{s['name']}"),
-                      InlineKeyboardButton("❌ غاب",callback_data=f"absent_{s['name']}")
+                      InlineKeyboardButton(" حضر",callback_data=f"present_{s['name']}"),
+                      InlineKeyboardButton(" غاب",callback_data=f"absent_{s['name']}")
                     ]]  
                     try:
-                        await context.bot.send_message(chat_id=int(cid),text=f"👤 {s['name']}",reply_markup=InlineKeyboardMarkup(kb))
+                        await context.bot.send_message(chat_id=int(cid),text=f" {s['name']}",reply_markup=InlineKeyboardMarkup(kb))
                     except:
                         pass
     def main():
-        print("🚀 تشغيل...")
+        print(" تشغيل...")
         app=Application.builder().token(TELEGRAM_TOKEN).build()
         app.add_handler(CommandHandler("start",hi))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,msg))  
@@ -134,6 +134,6 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
         sch=AsyncIOScheduler() 
         sch.add_job(weekly,'cron',minute=0)
         sch.start()
-        print("✅ شغال!")
+        print(" شغال!")
         app.run_polling()
     if __name__=="__main__":     main()
