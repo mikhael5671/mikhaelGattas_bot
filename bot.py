@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import asyncio
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -64,7 +63,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "مثال: ماركو - 01234567890\n\n"
         "تقرير الحضور:\n"
         "اكتب: تقرير\n\n"
-        "ضبط ميعاد الاشعار:\n"
+        "طلب إشعار الحضور اليدوي:\n"
+        "اكتب: /check\n\n"
+        "ضبط ميعاد الإشعار التلقائي:\n"
         "اكتب: خلي الاشعار يوم الجمعة 4\n\n"
         "معرفة الميعاد:\n"
         "اكتب: ميعادي"
@@ -139,7 +140,7 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("اهلا بك!")
         return
     
-    await update.message.reply_text("لم افهم. جرب:\n- الاسم - الرقم\n- تقرير\n- خلي الاشعار يوم الجمعة 4")
+    await update.message.reply_text("لم افهم. جرب:\n- الاسم - الرقم\n- تقرير\n- /check")
 
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -149,48 +150,31 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     d = load()
     d["attendance"].append({"student_name":n,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
     save(d)
-    e = "حضر" if a == "present" else "غاب"
-    await q.edit_message_text(f"{n}: {e}")
+    await q.edit_message_text(f"{n}: {s}")
 
-async def check_and_send_messages(app):
-    """التحقق من الوقت وإرسال الإشعارات بدون apscheduler."""
-    print("تم تشغيل نظام الإشعارات الداخلي.")
-    while True:
-        now = datetime.now()
-        today_eng = now.strftime("%a").lower()[:3]
-        hour_now = now.hour
-        minute_now = now.minute
-        
-        # فقط في الدقيقة 0 من كل ساعة
-        if minute_now == 0:
-            d = load()
-            students = [s for s in d.get("students",[]) if s.get("active",True)]
-            if students:
-                for cid, admin_data in d.get("admins",{}).items():
-                    admin_day = admin_data.get("day","fri")
-                    admin_hour = admin_data.get("hour",14)
-                    
-                    if admin_day == today_eng and admin_hour == hour_now:
-                        for s in students:
-                            kb = [[InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
-                                   InlineKeyboardButton("غاب", callback_data=f"absent_{s['name']}")]]
-                            try:
-                                await app.bot.send_message(chat_id=int(cid), text=f"حضور: {s['name']}", reply_markup=InlineKeyboardMarkup(kb))
-                            except Exception as e:
-                                print(f"خطأ أثناء إرسال الإشعار: {e}")
-        
-        await asyncio.sleep(30)  # التحقق كل 30 ثانية
+async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """إرسال أزرار الحضور يدوياً عند طلب /check"""
+    d = load()
+    students = [s for s in d.get("students",[]) if s.get("active",True)]
+    if not students:
+        await update.message.reply_text("لا يوجد مخدومين مسجلين.")
+        return
+    for s in students:
+        kb = [[
+            InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
+            InlineKeyboardButton("غاب", callback_data=f"absent_{s['name']}")
+        ]]
+        await update.message.reply_text(text=f"حضور: {s['name']}", reply_markup=InlineKeyboardMarkup(kb))
 
 def main():
     print("جاري تشغيل البوت...")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg)) # تم تصحيح الفلتر لمنع التداخل
-    app.add_handler(CallbackQueryHandler(btn))
+    app.add_handler(CommandHandler("check", check))
     
-    # تشغيل حلقة الإشعارات بجانب البوت
-    loop = asyncio.get_event_loop()
-    loop.create_task(check_and_send_messages(app))
+    # تم تعديل الفلتر هنا لمنع تداخل الرسائل النصية المكتوبة مع الأوامر المباشرة
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
+    app.add_handler(CallbackQueryHandler(btn))
     
     print("البوت شغال!")
     app.run_polling(drop_pending_updates=True)
