@@ -6,7 +6,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-
+# تم وضع التوكن الخاص بك هنا
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
 DATA_FILE = "data.json"
 
@@ -172,15 +172,16 @@ def main():
     print("تشغيل...")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg)) 
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
-    
     
     from datetime import timezone
     sch = AsyncIOScheduler(timezone=timezone.utc)
     
-    sch.add_job(weekly, 'cron', minute=0)
+    # تم تعديل هذا السطر لتمرير الـ context المناسب للوظيفة تلقائياً
+    sch.add_job(weekly, 'cron', minute=0, kwargs={'context': ContextTypes.DEFAULT_TYPE(app)})
     sch.start()
+    
     print("شغال!")
     app.run_polling(drop_pending_updates=True)
 
