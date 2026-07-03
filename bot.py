@@ -37,7 +37,7 @@ async def hi(update:Update,context:ContextTypes.DEFAULT_TYPE):
   if "admins" not in d: d["admins"]={}
   if cid not in d["admins"]: d["admins"][cid]={"day":"fri","hour":14};save(d)
   await update.message.reply_text("اهلا\n\nالرقم-الاسم:تسجيل\nاحصائيات:تقرير\nخلي الاشعار يوم الجمعة:ضبط4\nميعادي:معرفة الميعاد")
-  async def msg(update:Update,context:ContextTypes.DEFAULT_TYPE):
+async def msg(update:Update,context:ContextTypes.DEFAULT_TYPE):
     text=update.message.text
     cid=str(update.effective_chat.id)
     act,val=what(text)
