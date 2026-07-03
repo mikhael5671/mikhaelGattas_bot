@@ -11,7 +11,7 @@ from telegram.error import Conflict
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("telegram").setLevel(logging.WARNING)
 
-# ضع التوكن الخاص بك هنا
+
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
 DATA_FILE = "data.json"
 
