@@ -1,3 +1,4 @@
+
 import json
 import os
 import time
@@ -43,10 +44,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_admin_data(str(update.effective_chat.id))
     await update.message.reply_text(
         "اهلا بك في بوت مدارس الاحد!\n\n"
-        "تسجيل مخدوم: اكتب الاسم فقط\n"
+        "تسجيل: اكتب الاسم فقط\n"
         "تقرير: اكتب تقرير\n"
-        "حضور: اكتب /check\n"
-        "مسح: اكتب /reset"
+        "حضور: /check\n"
+        "مسح: /reset"
     )
 
 async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -54,7 +55,7 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
     admin_data = get_admin_data(cid)
 
-    if text in ["تقرير", "احصائيات", "نسبة", "غاب", "حضر"]:
+    if text in ["تقرير", "احصائيات"]:
         att = admin_data.get("attendance", [])
         if not att:
             await update.message.reply_text("لا يوجد بيانات حضور.")
@@ -89,7 +90,7 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"تم تسجيل: {text}")
         return
 
-    await update.message.reply_text("اكتب اسم المخدوم للتسجيل")
+    await update.message.reply_text("اكتب اسم للتسجيل او تقرير للاحصائيات")
 
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -112,6 +113,9 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not students:
         await update.message.reply_text("لا يوجد مخدومين.")
         return
+    
+    await update.message.reply_text(f"عدد المخدومين: {len(students)}")
+    
     for s in students:
         kb = [[
             InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
@@ -134,7 +138,7 @@ def main():
     app.add_handler(CommandHandler("check", check))
     app.add_handler(CommandHandler("reset", reset))
     
-   
+ 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
     app.run_polling(drop_pending_updates=True)
