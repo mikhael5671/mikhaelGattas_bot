@@ -69,14 +69,6 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(rep)
         return
 
-    if text in ["هاي","هالو","اهلا","سلام"]:
-        await update.message.reply_text("اهلا!")
-        return
-
-    if text == "بتعمل ايه":
-        await update.message.reply_text("بوت مدارس الاحد.\nتسجيل: اكتب الاسم\nتقرير: تقرير\nحضور: /check")
-        return
-
     if len(text) > 1 and not text.startswith("/"):
         admin_data["students"].append({"name":text,"active":True})
         save_admin_data(cid, admin_data)
@@ -89,8 +81,13 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     data = q.data
-    name = data.replace("present_", "").replace("absent_", "")
-    s = "حضر" if data.startswith("present") else "غاب"
+    
+    
+    parts = data.split("_", 1)
+    action = parts[0]
+    name = parts[1]
+    
+    s = "حضر" if action == "present" else "غاب"
     cid = str(q.message.chat.id)
     admin_data = get_admin_data(cid)
     admin_data["attendance"].append({"student_name":name,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
@@ -107,8 +104,6 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not students:
         await update.message.reply_text("لا يوجد مخدومين.")
         return
-    
-    await update.message.reply_text(f"عدد المخدومين: {len(students)}")
     
     for s in students:
         kb = [[
