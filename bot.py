@@ -10,7 +10,7 @@ from telegram.error import Conflict
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("telegram").setLevel(logging.WARNING)
 
-# التوكن الخاص بك مدمج وجاهز للتشغيل
+
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
 DATA_FILE = "data.json"
 
@@ -79,19 +79,24 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
-    await q.answer()
     data = q.data
     
-    # تم التعديل هنا لتقسيم النص لجزأين فقط لدعم الأسماء المركبة بأمان
-    parts = data.split("_", 1)
-    action = parts[0]
-    name = parts[1]
     
-    s = "حضر" if action == "present" else "غاب"
+    await q.answer()
+    
+   
+    name = data.replace("p_", "").replace("a_", "")
+    
+    if data.startswith("p_"):
+        s = "حضر"
+    else:
+        s = "غاب"
+    
     cid = str(q.message.chat.id)
     admin_data = get_admin_data(cid)
     admin_data["attendance"].append({"student_name":name,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
     save_admin_data(cid, admin_data)
+    
     await q.edit_message_text(f"{name}: {s}")
 
     if s == "غاب":
@@ -107,8 +112,8 @@ async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for s in students:
         kb = [[
-            InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
-            InlineKeyboardButton("غاب", callback_data=f"absent_{s['name']}")
+            InlineKeyboardButton("حضر", callback_data=f"p_{s['name']}"),
+            InlineKeyboardButton("غاب", callback_data=f"a_{s['name']}")
         ]]
         await update.message.reply_text(text=f"{s['name']}", reply_markup=InlineKeyboardMarkup(kb))
 
@@ -127,7 +132,7 @@ def main():
     app.add_handler(CommandHandler("check", check))
     app.add_handler(CommandHandler("reset", reset))
     
-    # تم تحديث الفلتر هنا لمنع تسجيل الأوامر كأسماء مخدومين بالخطأ
+   
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
     app.run_polling(drop_pending_updates=True)
