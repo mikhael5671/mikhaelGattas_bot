@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import time
 import logging
 from datetime import datetime
@@ -40,69 +39,34 @@ def save_admin_data(cid, admin_data):
     all_data[cid] = admin_data
     save_all(all_data)
 
-def what(text):
-    text = text.strip()
-    
-    if "اسجل" in text or "تسجيل" in text or "مخدوم" in text or "اضيف" in text or "جديد" in text:
-        return "want", None
-    if "بتعمل ايه" in text or "وظيفتك" in text or "مين انت" in text:
-        return "desc", None
-    if "احصائيات" in text or "تقرير" in text or "نسبة" in text or "غاب" in text or "حضر" in text:
-        return "ask", text
-    if text == "/start" or text == "هاي" or text == "هالو" or text == "اهلا" or text == "سلام":
-        return "hi", None
-    if text.startswith("/"):
-        return "?", None
-    
-   
-    if len(text) > 1:
-        return "reg", {"name": text, "phone": ""}
-    
-    return "?", None
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_admin_data(str(update.effective_chat.id))
     await update.message.reply_text(
         "اهلا بك في بوت مدارس الاحد!\n\n"
-        "تسجيل مخدوم جديد:\n"
-        "اكتب اسم المخدوم فقط\n"
-        "مثال: ماركو فادي\n\n"
-        "تقرير الحضور:\n"
-        "اكتب: تقرير\n\n"
-        "طلب إشعار الحضور:\n"
-        "اكتب: /check\n\n"
-        "لمسح كل بياناتك:\n"
-        "اكتب: /reset"
+        "تسجيل مخدوم: اكتب الاسم فقط\n"
+        "تقرير: اكتب تقرير\n"
+        "حضور: اكتب /check\n"
+        "مسح: اكتب /reset"
     )
 
 async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+    text = update.message.text.strip()
     cid = str(update.effective_chat.id)
-    act, val = what(text)
     admin_data = get_admin_data(cid)
 
-    if act == "desc":
-        await update.message.reply_text("بوت مدارس الاحد الذكي.\n\nتسجيل: اكتب اسم المخدوم\nتقارير: تقرير\nتنبيهات عند الغياب")
-        return
-
-    if act == "reg":
-        admin_data["students"].append({"name":val["name"],"phone":"","active":True})
-        save_admin_data(cid, admin_data)
-        await update.message.reply_text(f"تم تسجيل المخدوم بنجاح!\nالاسم: {val['name']}")
-        return
-
-    if act == "want":
-        await update.message.reply_text("اكتب اسم المخدوم فقط\nمثال: ماركو فادي")
-        return
-
-    if act == "ask":
+    if text in ["تقرير", "احصائيات", "نسبة", "غاب", "حضر"]:
         att = admin_data.get("attendance", [])
-        if not att: await update.message.reply_text("لا يوجد بيانات حضور."); return
+        if not att:
+            await update.message.reply_text("لا يوجد بيانات حضور.")
+            return
         stats = {}
         for r in att:
-            n = r.get("student_name","?"); s = r.get("status","")
-            if n not in stats: stats[n] = {"حضر":0,"غاب":0}
-            if s in stats[n]: stats[n][s] += 1
+            n = r.get("student_name","?")
+            s = r.get("status","")
+            if n not in stats:
+                stats[n] = {"حضر":0,"غاب":0}
+            if s in stats[n]:
+                stats[n][s] += 1
         rep = "تقرير الحضور:\n\n"
         for n, s in stats.items():
             t = s["حضر"] + s["غاب"]
@@ -111,11 +75,21 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(rep)
         return
 
-    if act == "hi":
+    if text in ["هاي","هالو","اهلا","سلام"]:
         await update.message.reply_text("اهلا بك!")
         return
 
-    await update.message.reply_text("لم افهم. اكتب اسم المخدوم للتسجيل او تقرير للاحصائيات.")
+    if text == "بتعمل ايه":
+        await update.message.reply_text("بوت مدارس الاحد.\nتسجيل: اكتب الاسم\nتقرير: تقرير\nحضور: /check")
+        return
+
+    if len(text) > 1:
+        admin_data["students"].append({"name":text,"active":True})
+        save_admin_data(cid, admin_data)
+        await update.message.reply_text(f"تم تسجيل: {text}")
+        return
+
+    await update.message.reply_text("اكتب اسم المخدوم للتسجيل")
 
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -129,24 +103,21 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.edit_message_text(f"{n}: {s}")
 
     if s == "غاب":
-        await context.bot.send_message(
-            chat_id=int(cid),
-            text=f"تنبيه: {n} غاب عن مدارس الاحد النهاردة."
-        )
+        await context.bot.send_message(chat_id=int(cid), text=f"تنبيه: {n} غاب اليوم.")
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
     admin_data = get_admin_data(cid)
     students = [s for s in admin_data.get("students",[]) if s.get("active",True)]
     if not students:
-        await update.message.reply_text("لا يوجد مخدومين مسجلين.")
+        await update.message.reply_text("لا يوجد مخدومين.")
         return
     for s in students:
         kb = [[
             InlineKeyboardButton("حضر", callback_data=f"present_{s['name']}"),
             InlineKeyboardButton("غاب", callback_data=f"absent_{s['name']}")
         ]]
-        await update.message.reply_text(text=f"حضور: {s['name']}", reply_markup=InlineKeyboardMarkup(kb))
+        await update.message.reply_text(text=f"{s['name']}", reply_markup=InlineKeyboardMarkup(kb))
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
@@ -157,7 +128,7 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("تم مسح جميع بياناتك.")
 
 def main():
-    print("البوت يعمل...")
+    print("شغال...")
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("check", check))
