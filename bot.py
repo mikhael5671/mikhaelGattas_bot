@@ -10,7 +10,7 @@ from telegram.error import Conflict
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("telegram").setLevel(logging.WARNING)
 
-
+# التوكن الخاص بك مدمج وجاهز للتشغيل
 TOKEN = "8736687534:AAHU6DrhmDGBKyJQMbDmmURpUlA6Ht-DaEE"
 DATA_FILE = "data.json"
 
@@ -82,7 +82,7 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     data = q.data
     
-    
+    # تم التعديل هنا لتقسيم النص لجزأين فقط لدعم الأسماء المركبة بأمان
     parts = data.split("_", 1)
     action = parts[0]
     name = parts[1]
@@ -127,7 +127,7 @@ def main():
     app.add_handler(CommandHandler("check", check))
     app.add_handler(CommandHandler("reset", reset))
     
-   
+    # تم تحديث الفلتر هنا لمنع تسجيل الأوامر كأسماء مخدومين بالخطأ
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
     app.run_polling(drop_pending_updates=True)
