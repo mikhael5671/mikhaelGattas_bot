@@ -1,4 +1,3 @@
-
 import json
 import os
 import time
@@ -42,13 +41,7 @@ def save_admin_data(cid, admin_data):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     get_admin_data(str(update.effective_chat.id))
-    await update.message.reply_text(
-        "اهلا بك في بوت مدارس الاحد!\n\n"
-        "تسجيل: اكتب الاسم فقط\n"
-        "تقرير: اكتب تقرير\n"
-        "حضور: /check\n"
-        "مسح: /reset"
-    )
+    await update.message.reply_text("اهلا!\nتسجيل: اكتب الاسم\nتقرير: تقرير\nحضور: /check\nمسح: /reset")
 
 async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
@@ -68,7 +61,7 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 stats[n] = {"حضر":0,"غاب":0}
             if s in stats[n]:
                 stats[n][s] += 1
-        rep = "تقرير الحضور:\n\n"
+        rep = "تقرير:\n\n"
         for n, s in stats.items():
             t = s["حضر"] + s["غاب"]
             p = round(s["حضر"]/t*100) if t>0 else 0
@@ -77,14 +70,14 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if text in ["هاي","هالو","اهلا","سلام"]:
-        await update.message.reply_text("اهلا بك!")
+        await update.message.reply_text("اهلا!")
         return
 
     if text == "بتعمل ايه":
         await update.message.reply_text("بوت مدارس الاحد.\nتسجيل: اكتب الاسم\nتقرير: تقرير\nحضور: /check")
         return
 
-    if len(text) > 1:
+    if len(text) > 1 and not text.startswith("/"):
         admin_data["students"].append({"name":text,"active":True})
         save_admin_data(cid, admin_data)
         await update.message.reply_text(f"تم تسجيل: {text}")
@@ -95,16 +88,17 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
-    a, n = q.data.split("_", 1)
-    s = "حضر" if a == "present" else "غاب"
-    cid = str(update.effective_chat.id)
+    data = q.data
+    name = data.replace("present_", "").replace("absent_", "")
+    s = "حضر" if data.startswith("present") else "غاب"
+    cid = str(q.message.chat.id)
     admin_data = get_admin_data(cid)
-    admin_data["attendance"].append({"student_name":n,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
+    admin_data["attendance"].append({"student_name":name,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
     save_admin_data(cid, admin_data)
-    await q.edit_message_text(f"{n}: {s}")
+    await q.edit_message_text(f"{name}: {s}")
 
     if s == "غاب":
-        await context.bot.send_message(chat_id=int(cid), text=f"تنبيه: {n} غاب اليوم.")
+        await context.bot.send_message(chat_id=int(cid), text=f"تنبيه: {name} غاب اليوم.")
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
@@ -138,7 +132,7 @@ def main():
     app.add_handler(CommandHandler("check", check))
     app.add_handler(CommandHandler("reset", reset))
     
- 
+   
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
     app.run_polling(drop_pending_updates=True)
