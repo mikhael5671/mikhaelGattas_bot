@@ -42,13 +42,7 @@ def save_admin_data(cid, admin_data):
 
 def what(text):
     text = text.strip()
-    if "-" in text:
-        p = text.split("-")
-        if len(p) >= 2:
-            n = p[0].strip()
-            ph = p[1].strip()
-            if n and any(c.isdigit() for c in ph):
-                return "reg", {"name":n,"phone":ph}
+    
     if "اسجل" in text or "تسجيل" in text or "مخدوم" in text or "اضيف" in text or "جديد" in text:
         return "want", None
     if "بتعمل ايه" in text or "وظيفتك" in text or "مين انت" in text:
@@ -57,6 +51,13 @@ def what(text):
         return "ask", text
     if text == "/start" or text == "هاي" or text == "هالو" or text == "اهلا" or text == "سلام":
         return "hi", None
+    if text.startswith("/"):
+        return "?", None
+    
+   
+    if len(text) > 1:
+        return "reg", {"name": text, "phone": ""}
+    
     return "?", None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -64,8 +65,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "اهلا بك في بوت مدارس الاحد!\n\n"
         "تسجيل مخدوم جديد:\n"
-        "اكتب: الاسم - الرقم\n"
-        "مثال: ماركو - 01234567890\n\n"
+        "اكتب اسم المخدوم فقط\n"
+        "مثال: ماركو فادي\n\n"
         "تقرير الحضور:\n"
         "اكتب: تقرير\n\n"
         "طلب إشعار الحضور:\n"
@@ -81,17 +82,17 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_data = get_admin_data(cid)
 
     if act == "desc":
-        await update.message.reply_text("بوت مدارس الاحد الذكي.\n\nالتسجيل: الاسم - الرقم\nالتقارير: تقرير")
+        await update.message.reply_text("بوت مدارس الاحد الذكي.\n\nتسجيل: اكتب اسم المخدوم\nتقارير: تقرير\nتنبيهات عند الغياب")
         return
 
     if act == "reg":
-        admin_data["students"].append({"name":val["name"],"phone":val["phone"],"active":True})
+        admin_data["students"].append({"name":val["name"],"phone":"","active":True})
         save_admin_data(cid, admin_data)
-        await update.message.reply_text(f"تم تسجيل المخدوم بنجاح!\nالاسم: {val['name']}\nالرقم: {val['phone']}")
+        await update.message.reply_text(f"تم تسجيل المخدوم بنجاح!\nالاسم: {val['name']}")
         return
 
     if act == "want":
-        await update.message.reply_text("اكتب: الاسم - الرقم\nمثال: ماركو - 01234567890")
+        await update.message.reply_text("اكتب اسم المخدوم فقط\nمثال: ماركو فادي")
         return
 
     if act == "ask":
@@ -114,7 +115,7 @@ async def msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("اهلا بك!")
         return
 
-    await update.message.reply_text("لم افهم. جرب:\n- الاسم - الرقم\n- تقرير\n- /check")
+    await update.message.reply_text("لم افهم. اكتب اسم المخدوم للتسجيل او تقرير للاحصائيات.")
 
 async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -126,6 +127,12 @@ async def btn(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_data["attendance"].append({"student_name":n,"date":datetime.now().strftime("%Y-%m-%d"),"status":s})
     save_admin_data(cid, admin_data)
     await q.edit_message_text(f"{n}: {s}")
+
+    if s == "غاب":
+        await context.bot.send_message(
+            chat_id=int(cid),
+            text=f"تنبيه: {n} غاب عن مدارس الاحد النهاردة."
+        )
 
 async def check(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cid = str(update.effective_chat.id)
@@ -147,7 +154,7 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if cid in all_data:
         del all_data[cid]
         save_all(all_data)
-    await update.message.reply_text("تم مسح جميع بياناتك وبدأ التشغيل من جديد.")
+    await update.message.reply_text("تم مسح جميع بياناتك.")
 
 def main():
     print("البوت يعمل...")
@@ -156,7 +163,7 @@ def main():
     app.add_handler(CommandHandler("check", check))
     app.add_handler(CommandHandler("reset", reset))
     
-    # تم تعديل الفلتر هنا لمنع التداخل مع الأوامر المباشرة
+   
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg))
     app.add_handler(CallbackQueryHandler(btn))
     app.run_polling(drop_pending_updates=True)
@@ -166,8 +173,7 @@ if __name__ == "__main__":
         try:
             main()
         except Conflict:
-            print("هناك نسخة أخرى تعمل، جاري المحاولة بعد ثانيتين...")
             time.sleep(2)
         except Exception as e:
-            print(f"خطأ غير متوقع: {e}")
+            print(f"خطأ: {e}")
             time.sleep(5)
